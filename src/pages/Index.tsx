@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Users, Clock, Target, Zap, Trophy } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<string | null>(null);
   const [wordLength, setWordLength] = useState(5);
+  const { currentTheme } = useTheme();
 
   const gameModes = [
     {
@@ -52,7 +54,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 p-4">
+    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4`}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 pt-8">

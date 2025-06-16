@@ -152,7 +152,7 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 p-4">
+    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

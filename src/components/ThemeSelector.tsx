@@ -41,20 +41,25 @@ const ThemeSelector = () => {
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{theme.name}</CardTitle>
+                  <CardTitle className={`text-lg ${theme.font}`}>{theme.name}</CardTitle>
                   {currentTheme.id === theme.id && (
                     <Check className="w-5 h-5 text-blue-500" />
                   )}
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Background preview */}
+                <div className={`w-full h-8 rounded mb-3 ${theme.background}`} />
+                
+                {/* Color tiles preview */}
                 <div className="flex gap-2 mb-3">
                   <div className={`w-8 h-8 rounded ${theme.colors.correct} border-2 border-white shadow-sm`} />
                   <div className={`w-8 h-8 rounded ${theme.colors.present} border-2 border-white shadow-sm`} />
                   <div className={`w-8 h-8 rounded ${theme.colors.absent} border-2 border-white shadow-sm`} />
                 </div>
-                <div className="text-sm text-gray-600">
-                  Preview tiles with {theme.name.toLowerCase()} colors
+                
+                <div className={`text-sm text-gray-600 ${theme.font}`}>
+                  {theme.font.includes('serif') ? 'Serif font' : theme.font.includes('mono') ? 'Monospace font' : 'Sans serif font'} • Custom background
                 </div>
               </CardContent>
             </Card>

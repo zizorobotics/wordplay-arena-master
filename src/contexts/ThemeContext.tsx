@@ -11,6 +11,8 @@ export interface WordleTheme {
     empty: string;
     current: string;
   };
+  background: string;
+  font: string;
 }
 
 export const themes: WordleTheme[] = [
@@ -23,7 +25,9 @@ export const themes: WordleTheme[] = [
       absent: 'bg-gray-500',
       empty: 'bg-gray-100 border-gray-300',
       current: 'bg-blue-100 border-blue-300'
-    }
+    },
+    background: 'bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800',
+    font: 'font-sans'
   },
   {
     id: 'ocean',
@@ -34,7 +38,9 @@ export const themes: WordleTheme[] = [
       absent: 'bg-slate-500',
       empty: 'bg-blue-50 border-blue-200',
       current: 'bg-blue-200 border-blue-400'
-    }
+    },
+    background: 'bg-gradient-to-br from-cyan-500 via-teal-600 to-blue-800',
+    font: 'font-sans'
   },
   {
     id: 'sunset',
@@ -45,7 +51,9 @@ export const themes: WordleTheme[] = [
       absent: 'bg-gray-600',
       empty: 'bg-orange-50 border-orange-200',
       current: 'bg-orange-200 border-orange-400'
-    }
+    },
+    background: 'bg-gradient-to-br from-orange-400 via-red-500 to-pink-600',
+    font: 'font-serif'
   },
   {
     id: 'forest',
@@ -56,7 +64,9 @@ export const themes: WordleTheme[] = [
       absent: 'bg-stone-500',
       empty: 'bg-green-50 border-green-200',
       current: 'bg-green-200 border-green-400'
-    }
+    },
+    background: 'bg-gradient-to-br from-green-600 via-emerald-700 to-teal-800',
+    font: 'font-mono'
   },
   {
     id: 'purple',
@@ -67,7 +77,9 @@ export const themes: WordleTheme[] = [
       absent: 'bg-gray-500',
       empty: 'bg-purple-50 border-purple-200',
       current: 'bg-purple-200 border-purple-400'
-    }
+    },
+    background: 'bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-700',
+    font: 'font-serif'
   },
   {
     id: 'rose',
@@ -78,7 +90,9 @@ export const themes: WordleTheme[] = [
       absent: 'bg-gray-500',
       empty: 'bg-rose-50 border-rose-200',
       current: 'bg-rose-200 border-rose-400'
-    }
+    },
+    background: 'bg-gradient-to-br from-pink-400 via-rose-500 to-red-600',
+    font: 'font-sans'
   }
 ];
 
