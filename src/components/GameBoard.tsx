@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, RotateCcw } from "lucide-react";
 import VirtualKeyboard from "./VirtualKeyboard";
 import GameStats from "./GameStats";
+import ThemeSelector from "./ThemeSelector";
 import { checkGuess, getRandomWord, isValidWord } from "@/lib/gameLogic";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface GameBoardProps {
   gameMode: string;
@@ -24,6 +26,7 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [usedLetters, setUsedLetters] = useState<Record<string, GuessResult>>({});
   const { toast } = useToast();
+  const { currentTheme } = useTheme();
 
   const maxGuesses = 6;
 
@@ -115,26 +118,26 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
   };
 
   const renderTile = (letter: string, result: GuessResult, index: number, isCurrentGuess: boolean = false) => {
-    let bgColor = 'bg-gray-100 border-gray-300';
+    let bgColor = currentTheme.colors.empty;
     let textColor = 'text-gray-800';
 
     if (!isCurrentGuess) {
       switch (result) {
         case 'correct':
-          bgColor = 'bg-green-500';
+          bgColor = currentTheme.colors.correct;
           textColor = 'text-white';
           break;
         case 'present':
-          bgColor = 'bg-yellow-500';
+          bgColor = currentTheme.colors.present;
           textColor = 'text-white';
           break;
         case 'absent':
-          bgColor = 'bg-gray-500';
+          bgColor = currentTheme.colors.absent;
           textColor = 'text-white';
           break;
       }
     } else if (letter) {
-      bgColor = 'bg-blue-100 border-blue-300';
+      bgColor = currentTheme.colors.current;
       textColor = 'text-blue-800';
     }
 
@@ -164,14 +167,17 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
           <h1 className="text-3xl font-bold text-white">
             {gameMode === 'solo' ? 'Solo Play' : gameMode}
           </h1>
-          <Button
-            variant="outline"
-            onClick={startNewGame}
-            className="bg-white/20 text-white border-white/30 hover:bg-white/30"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            New Game
-          </Button>
+          <div className="flex gap-2">
+            <ThemeSelector />
+            <Button
+              variant="outline"
+              onClick={startNewGame}
+              className="bg-white/20 text-white border-white/30 hover:bg-white/30"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              New Game
+            </Button>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
