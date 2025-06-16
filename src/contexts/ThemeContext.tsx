@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 export interface WordleTheme {
   id: string;
@@ -99,22 +99,34 @@ export const themes: WordleTheme[] = [
 interface ThemeContextType {
   currentTheme: WordleTheme;
   setTheme: (themeId: string) => void;
+  isTransitioning: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [currentTheme, setCurrentTheme] = useState<WordleTheme>(themes[0]);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const setTheme = (themeId: string) => {
     const theme = themes.find(t => t.id === themeId);
-    if (theme) {
-      setCurrentTheme(theme);
+    if (theme && theme.id !== currentTheme.id) {
+      setIsTransitioning(true);
+      
+      // Start transition
+      setTimeout(() => {
+        setCurrentTheme(theme);
+        
+        // End transition after theme change
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 50);
+      }, 150);
     }
   };
 
   return (
-    <ThemeContext.Provider value={{ currentTheme, setTheme }}>
+    <ThemeContext.Provider value={{ currentTheme, setTheme, isTransitioning }}>
       {children}
     </ThemeContext.Provider>
   );

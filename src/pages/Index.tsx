@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 const Index = () => {
   const [gameMode, setGameMode] = useState<string | null>(null);
   const [wordLength, setWordLength] = useState(5);
-  const { currentTheme } = useTheme();
+  const { currentTheme, isTransitioning } = useTheme();
 
   const gameModes = [
     {
@@ -54,7 +53,7 @@ const Index = () => {
   }
 
   return (
-    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4`}>
+    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12 pt-8">

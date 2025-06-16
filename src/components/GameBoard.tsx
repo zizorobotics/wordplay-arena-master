@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +25,7 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [usedLetters, setUsedLetters] = useState<Record<string, GuessResult>>({});
   const { toast } = useToast();
-  const { currentTheme } = useTheme();
+  const { currentTheme, isTransitioning } = useTheme();
 
   const maxGuesses = 6;
 
@@ -152,7 +151,7 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
   };
 
   return (
-    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4`}>
+    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
