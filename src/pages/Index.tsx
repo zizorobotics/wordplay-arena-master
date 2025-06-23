@@ -5,11 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Clock, Target, Zap, Trophy } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
+import MatchmakingPage from "@/components/MatchmakingPage";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<string | null>(null);
   const [wordLength, setWordLength] = useState(5);
+  const [showMatchmaking, setShowMatchmaking] = useState(false);
   const { currentTheme, isTransitioning } = useTheme();
 
   const gameModes = [
@@ -48,6 +50,28 @@ const Index = () => {
   ];
 
   const wordLengths = [4, 5, 6];
+
+  const handleRealtimeMode = () => {
+    setGameMode('realtime');
+    setShowMatchmaking(true);
+  };
+
+  const handlePlayerFound = () => {
+    setShowMatchmaking(false);
+  };
+
+  if (showMatchmaking && gameMode === 'realtime') {
+    return (
+      <MatchmakingPage 
+        wordLength={wordLength} 
+        onBack={() => {
+          setGameMode(null);
+          setShowMatchmaking(false);
+        }} 
+        onPlayerFound={handlePlayerFound}
+      />
+    );
+  }
 
   if (gameMode === 'realtime') {
     return <RealtimeGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
@@ -95,6 +119,8 @@ const Index = () => {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {gameModes.map((mode) => {
             const IconComponent = mode.icon;
+            const handleClick = mode.id === 'realtime' ? handleRealtimeMode : () => mode.available && setGameMode(mode.id);
+            
             return (
               <Card 
                 key={mode.id}
@@ -103,7 +129,7 @@ const Index = () => {
                     ? "bg-white/95 hover:bg-white shadow-xl hover:shadow-2xl" 
                     : "bg-gray-300/50 cursor-not-allowed"
                 }`}
-                onClick={() => mode.available && setGameMode(mode.id)}
+                onClick={handleClick}
               >
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
