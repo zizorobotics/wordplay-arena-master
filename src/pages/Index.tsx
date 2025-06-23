@@ -26,7 +26,7 @@ const Index = () => {
       description: 'Race against another player to solve first',
       icon: Zap,
       color: 'bg-red-500',
-      available: false
+      available: true
     },
     {
       id: 'turnbased',
