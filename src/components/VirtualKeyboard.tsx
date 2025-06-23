@@ -1,68 +1,120 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Delete } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface VirtualKeyboardProps {
   onKeyPress: (key: string) => void;
   usedLetters: Record<string, 'correct' | 'present' | 'absent' | ''>;
+  disabled?: boolean;
 }
 
-const VirtualKeyboard = ({ onKeyPress, usedLetters }: VirtualKeyboardProps) => {
+const VirtualKeyboard = ({ onKeyPress, usedLetters, disabled = false }: VirtualKeyboardProps) => {
+  const { currentTheme } = useTheme();
+
   const topRow = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
   const middleRow = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
   const bottomRow = ['Z', 'X', 'C', 'V', 'B', 'N', 'M'];
 
   const getKeyStyle = (letter: string) => {
-    const result = usedLetters[letter];
-    switch (result) {
-      case 'correct':
-        return 'bg-green-500 text-white hover:bg-green-600';
-      case 'present':
-        return 'bg-yellow-500 text-white hover:bg-yellow-600';
-      case 'absent':
-        return 'bg-gray-500 text-white hover:bg-gray-600';
-      default:
-        return 'bg-gray-200 text-gray-800 hover:bg-gray-300';
+    const status = usedLetters[letter];
+    let bgColor = 'bg-gray-200 hover:bg-gray-300';
+    let textColor = 'text-gray-800';
+
+    if (disabled) {
+      bgColor = 'bg-gray-100';
+      textColor = 'text-gray-400';
+    } else {
+      switch (status) {
+        case 'correct':
+          bgColor = currentTheme.colors.correct.replace('bg-', 'bg-') + ' hover:opacity-80';
+          textColor = 'text-white';
+          break;
+        case 'present':
+          bgColor = currentTheme.colors.present.replace('bg-', 'bg-') + ' hover:opacity-80';
+          textColor = 'text-white';
+          break;
+        case 'absent':
+          bgColor = currentTheme.colors.absent.replace('bg-', 'bg-') + ' hover:opacity-80';
+          textColor = 'text-white';
+          break;
+      }
+    }
+
+    return `${bgColor} ${textColor}`;
+  };
+
+  const handleKeyClick = (key: string) => {
+    if (!disabled) {
+      onKeyPress(key);
     }
   };
 
-  const renderKey = (letter: string, extraClasses: string = '') => (
-    <Button
-      key={letter}
-      onClick={() => onKeyPress(letter)}
-      className={`h-12 font-semibold transition-all duration-200 ${getKeyStyle(letter)} ${extraClasses}`}
-    >
-      {letter}
-    </Button>
-  );
-
   return (
-    <div className="select-none">
-      {/* Top row */}
+    <div className="w-full max-w-2xl mx-auto">
+      {/* Top Row */}
       <div className="flex justify-center gap-1 mb-2">
-        {topRow.map(letter => renderKey(letter, 'px-3'))}
+        {topRow.map((letter) => (
+          <Button
+            key={letter}
+            variant="outline"
+            size="sm"
+            onClick={() => handleKeyClick(letter)}
+            disabled={disabled}
+            className={`w-10 h-10 p-0 font-semibold border-0 ${getKeyStyle(letter)}`}
+          >
+            {letter}
+          </Button>
+        ))}
       </div>
 
-      {/* Middle row */}
+      {/* Middle Row */}
       <div className="flex justify-center gap-1 mb-2">
-        {middleRow.map(letter => renderKey(letter, 'px-3'))}
+        {middleRow.map((letter) => (
+          <Button
+            key={letter}
+            variant="outline"
+            size="sm"
+            onClick={() => handleKeyClick(letter)}
+            disabled={disabled}
+            className={`w-10 h-10 p-0 font-semibold border-0 ${getKeyStyle(letter)}`}
+          >
+            {letter}
+          </Button>
+        ))}
       </div>
 
-      {/* Bottom row */}
+      {/* Bottom Row */}
       <div className="flex justify-center gap-1">
         <Button
-          onClick={() => onKeyPress('ENTER')}
-          className="h-12 px-4 font-semibold bg-blue-500 text-white hover:bg-blue-600 transition-all duration-200"
+          variant="outline"
+          onClick={() => handleKeyClick('ENTER')}
+          disabled={disabled}
+          className={`px-3 h-10 font-semibold border-0 ${disabled ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
         >
           ENTER
         </Button>
-        {bottomRow.map(letter => renderKey(letter, 'px-3'))}
+        
+        {bottomRow.map((letter) => (
+          <Button
+            key={letter}
+            variant="outline"
+            size="sm"
+            onClick={() => handleKeyClick(letter)}
+            disabled={disabled}
+            className={`w-10 h-10 p-0 font-semibold border-0 ${getKeyStyle(letter)}`}
+          >
+            {letter}
+          </Button>
+        ))}
+        
         <Button
-          onClick={() => onKeyPress('BACKSPACE')}
-          className="h-12 px-4 font-semibold bg-red-500 text-white hover:bg-red-600 transition-all duration-200"
+          variant="outline"
+          onClick={() => handleKeyClick('BACKSPACE')}
+          disabled={disabled}
+          className={`px-3 h-10 font-semibold border-0 ${disabled ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
         >
-          <Delete className="w-4 h-4" />
+          ⌫
         </Button>
       </div>
     </div>
