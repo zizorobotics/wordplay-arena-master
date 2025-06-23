@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Users, Clock, Target, Zap, Trophy } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
+import RealtimeGame from "@/components/RealtimeGame";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const Index = () => {
@@ -47,6 +48,10 @@ const Index = () => {
   ];
 
   const wordLengths = [4, 5, 6];
+
+  if (gameMode === 'realtime') {
+    return <RealtimeGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
+  }
 
   if (gameMode) {
     return <GameBoard gameMode={gameMode} wordLength={wordLength} onBack={() => setGameMode(null)} />;

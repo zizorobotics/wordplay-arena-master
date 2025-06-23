@@ -30,7 +30,7 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
   const [targetWord, setTargetWord] = useState('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const [gameActive, setGameActive] = useState(true);
-  const [showOpponentWord, setShowOpponentWord] = useState(false); // Debug slider
+  const [showOpponentInfo, setShowOpponentInfo] = useState(false); // Debug slider
   const [winner, setWinner] = useState<'player' | 'opponent' | null>(null);
   
   // Player state (right side - you)
@@ -43,13 +43,19 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
     score: 0
   });
 
-  // Opponent state (left side)
+  // Opponent state (left side) - simulated for now
   const [opponent, setOpponent] = useState<PlayerState>({
-    currentGuess: '',
-    guesses: [],
-    guessResults: [],
+    currentGuess: 'HOUSE', // Mock current guess for demo
+    guesses: ['GREAT', 'FLAME'],
+    guessResults: [
+      ['absent', 'absent', 'absent', 'absent', 'absent'],
+      ['absent', 'absent', 'absent', 'absent', 'absent']
+    ],
     gameStatus: 'playing',
-    usedLetters: {},
+    usedLetters: {
+      'G': 'absent', 'R': 'absent', 'E': 'present', 'A': 'absent', 'T': 'absent',
+      'F': 'absent', 'L': 'absent', 'M': 'absent'
+    },
     score: 0
   });
 
@@ -268,14 +274,15 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
       {/* Current guess row */}
       {playerState.gameStatus === 'playing' && playerState.guesses.length < maxGuesses && (
         <div className="flex gap-1">
-          {Array.from({ length: wordLength }).map((_, index) =>
-            renderTile(
-              isPlayer ? playerState.currentGuess[index] || '' : '', 
-              '', 
-              index, 
-              true
-            )
-          )}
+          {Array.from({ length: wordLength }).map((_, index) => {
+            let letter = '';
+            if (isPlayer) {
+              letter = playerState.currentGuess[index] || '';
+            } else if (showOpponentInfo) {
+              letter = playerState.currentGuess[index] || '';
+            }
+            return renderTile(letter, '', index, true);
+          })}
         </div>
       )}
 
@@ -316,13 +323,13 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
           <div className="flex items-center gap-4">
             {/* Debug toggle */}
             <div className="flex items-center space-x-2 bg-white/20 rounded-lg p-2">
-              <Label htmlFor="show-word" className="text-white text-sm">Debug View</Label>
+              <Label htmlFor="show-opponent" className="text-white text-sm">Debug View</Label>
               <Switch
-                id="show-word"
-                checked={showOpponentWord}
-                onCheckedChange={setShowOpponentWord}
+                id="show-opponent"
+                checked={showOpponentInfo}
+                onCheckedChange={setShowOpponentInfo}
               />
-              {showOpponentWord ? <Eye className="w-4 h-4 text-white" /> : <EyeOff className="w-4 h-4 text-white" />}
+              {showOpponentInfo ? <Eye className="w-4 h-4 text-white" /> : <EyeOff className="w-4 h-4 text-white" />}
             </div>
             <Button
               variant="outline"
@@ -347,10 +354,14 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
             </CardHeader>
             <CardContent className="p-4">
               {renderPlayerBoard(opponent, false)}
-              {showOpponentWord && (
-                <div className="mt-4 text-center">
-                  <div className="text-sm text-gray-600">Debug: Target Word</div>
-                  <div className="font-bold text-lg">{targetWord}</div>
+              {showOpponentInfo && (
+                <div className="mt-4 text-center space-y-2">
+                  <div className="text-sm text-gray-600">Debug Info:</div>
+                  <div className="text-xs bg-gray-100 p-2 rounded">
+                    <div><strong>Target Word:</strong> {targetWord}</div>
+                    <div><strong>Current Guess:</strong> {opponent.currentGuess}</div>
+                    <div><strong>Used Letters:</strong> {Object.keys(opponent.usedLetters).join(', ')}</div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -388,6 +399,15 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
             </CardHeader>
             <CardContent className="p-4">
               {renderPlayerBoard(player, true)}
+              {showOpponentInfo && (
+                <div className="mt-4 text-center space-y-2">
+                  <div className="text-sm text-gray-600">Your Debug Info:</div>
+                  <div className="text-xs bg-gray-100 p-2 rounded">
+                    <div><strong>Current Guess:</strong> {player.currentGuess}</div>
+                    <div><strong>Used Letters:</strong> {Object.keys(player.usedLetters).join(', ')}</div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
