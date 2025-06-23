@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, Target, Zap, Trophy } from "lucide-react";
+import { Users, Clock, Target, Zap, Trophy, Star } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
 import MatchmakingPage from "@/components/MatchmakingPage";
@@ -168,7 +169,7 @@ const Index = () => {
           <Card className="bg-white/90 border-0">
             <CardContent className="text-center p-6">
               <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-              <h3 className="text-2xl font-bold text-gray-800">156</h3>
+              <h3 className="text-2xl font-bold text-gray-800">0</h3>
               <p className="text-gray-600">Games Won</p>
             </CardContent>
           </Card>
@@ -181,9 +182,9 @@ const Index = () => {
           </Card>
           <Card className="bg-white/90 border-0">
             <CardContent className="text-center p-6">
-              <Zap className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <h3 className="text-2xl font-bold text-gray-800">12</h3>
-              <p className="text-gray-600">Win Streak</p>
+              <Star className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+              <h3 className="text-2xl font-bold text-gray-800">500</h3>
+              <p className="text-gray-600">Word Rank</p>
             </CardContent>
           </Card>
         </div>

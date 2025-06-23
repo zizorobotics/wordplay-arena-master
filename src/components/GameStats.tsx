@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Target, Clock, TrendingUp } from "lucide-react";
+import { Trophy, Target, Clock, TrendingUp, Star } from "lucide-react";
 
 interface GameStatsProps {
   guesses: number;
@@ -68,19 +68,22 @@ const GameStats = ({ guesses, maxGuesses, gameStatus, wordLength }: GameStatsPro
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-gray-800">156</div>
-              <div className="text-sm text-gray-600">Games Played</div>
+              <div className="text-2xl font-bold text-gray-800">0</div>
+              <div className="text-sm text-gray-600">Games Won</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-green-600">73%</div>
               <div className="text-sm text-gray-600">Win Rate</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-blue-600">12</div>
-              <div className="text-sm text-gray-600">Current Streak</div>
+              <div className="text-2xl font-bold text-purple-600 flex items-center justify-center gap-1">
+                <Star className="w-5 h-5" />
+                500
+              </div>
+              <div className="text-sm text-gray-600">Word Rank</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-purple-600">4.2</div>
+              <div className="text-2xl font-bold text-blue-600">4.2</div>
               <div className="text-sm text-gray-600">Avg Guesses</div>
             </div>
           </div>
