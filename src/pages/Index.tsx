@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Clock, Target, Zap, Trophy, Star } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
+import TurnBasedGame from "@/components/TurnBasedGame";
 import MatchmakingPage from "@/components/MatchmakingPage";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -35,10 +36,10 @@ const Index = () => {
     {
       id: 'turnbased',
       title: '1v1 Turn-Based',
-      description: 'Strategic play seeing each other\'s guesses',
+      description: 'You and another player take turns guessing the same word. You can see each other\'s guesses, adding a strategic element.',
       icon: Clock,
       color: 'bg-yellow-500',
-      available: false
+      available: true
     },
     {
       id: 'cooperative',
@@ -76,6 +77,10 @@ const Index = () => {
 
   if (gameMode === 'realtime') {
     return <RealtimeGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
+  }
+
+  if (gameMode === 'turnbased') {
+    return <TurnBasedGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
   }
 
   if (gameMode) {
