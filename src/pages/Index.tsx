@@ -7,6 +7,7 @@ import { Users, Clock, Target, Zap, Trophy, Star } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
 import TurnBasedGame from "@/components/TurnBasedGame";
+import CooperativeGame from "@/components/CooperativeGame";
 import MatchmakingPage from "@/components/MatchmakingPage";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -44,10 +45,10 @@ const Index = () => {
     {
       id: 'cooperative',
       title: 'Cooperative',
-      description: 'Work together to solve the puzzle',
+      description: 'Work together with another player to solve one puzzle, taking turns',
       icon: Users,
       color: 'bg-green-500',
-      available: false
+      available: true
     }
   ];
 
@@ -81,6 +82,10 @@ const Index = () => {
 
   if (gameMode === 'turnbased') {
     return <TurnBasedGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
+  }
+
+  if (gameMode === 'cooperative') {
+    return <CooperativeGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
   }
 
   if (gameMode) {
