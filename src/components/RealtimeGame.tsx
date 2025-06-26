@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Clock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Clock, Eye, EyeOff, Zap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import VirtualKeyboard from "./VirtualKeyboard";
 import { checkGuess, getRandomWord, isValidWord } from "@/lib/gameLogic";
+import { calculateGuessScore, formatScoreBreakdown, getPerformanceRating, type GuessScore, type PlayerScoring } from "@/lib/scoringSystem";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -23,7 +23,7 @@ interface PlayerState {
   guessResults: GuessResult[][];
   gameStatus: 'playing' | 'won' | 'lost';
   usedLetters: Record<string, GuessResult>;
-  score: number;
+  scoring: PlayerScoring;
 }
 
 const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
@@ -40,7 +40,11 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
     guessResults: [],
     gameStatus: 'playing',
     usedLetters: {},
-    score: 0
+    scoring: {
+      currentScore: 0,
+      lastGuessScore: null,
+      guessStartTime: Date.now()
+    }
   });
 
   // Opponent state (left side) - simulated for now
@@ -56,7 +60,18 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
       'G': 'absent', 'R': 'absent', 'E': 'present', 'A': 'absent', 'T': 'absent',
       'F': 'absent', 'L': 'absent', 'M': 'absent'
     },
-    score: 0
+    scoring: {
+      currentScore: 150,
+      lastGuessScore: {
+        greenLetters: 1,
+        yellowLetters: 2,
+        baseScore: 90,
+        timeBonus: 60,
+        totalScore: 150,
+        timeTaken: 5.2
+      },
+      guessStartTime: Date.now()
+    }
   });
 
   const { toast } = useToast();
@@ -99,11 +114,15 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
       guessResults: [],
       gameStatus: 'playing',
       usedLetters: {},
-      score: 0
+      scoring: {
+        currentScore: 0,
+        lastGuessScore: null,
+        guessStartTime: Date.now()
+      }
     };
     
     setPlayer(initialState);
-    setOpponent(initialState);
+    setOpponent({ ...initialState, scoring: { ...initialState.scoring, currentScore: 0 } });
     console.log('New realtime game started with word:', newWord);
   };
 
@@ -115,19 +134,12 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
       setWinner('player');
     } else if (opponent.gameStatus === 'won' && player.gameStatus !== 'won') {
       setWinner('opponent');
-    } else if (player.score > opponent.score) {
+    } else if (player.scoring.currentScore > opponent.scoring.currentScore) {
       setWinner('player');
-    } else if (opponent.score > player.score) {
+    } else if (opponent.scoring.currentScore > player.scoring.currentScore) {
       setWinner('opponent');
     }
     // else it's a tie (winner stays null)
-  };
-
-  const calculateScore = (guessCount: number, timeUsed: number) => {
-    // Score based on fewer guesses and faster completion
-    const baseScore = Math.max(0, 7 - guessCount) * 100;
-    const timeBonus = Math.max(0, 300 - timeUsed);
-    return baseScore + timeBonus;
   };
 
   const handlePlayerKeyPress = (key: string) => {
@@ -141,7 +153,17 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
         currentGuess: prev.currentGuess.slice(0, -1)
       }));
     } else if (key.length === 1 && /^[A-Za-z]$/.test(key)) {
-      if (player.currentGuess.length < wordLength) {
+      // Reset guess start time on first letter
+      if (player.currentGuess.length === 0) {
+        setPlayer(prev => ({
+          ...prev,
+          currentGuess: key.toUpperCase(),
+          scoring: {
+            ...prev.scoring,
+            guessStartTime: Date.now()
+          }
+        }));
+      } else if (player.currentGuess.length < wordLength) {
         setPlayer(prev => ({
           ...prev,
           currentGuess: prev.currentGuess + key.toUpperCase()
@@ -173,6 +195,9 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
     }
 
     const result = checkGuess(player.currentGuess, targetWord);
+    const timeTaken = (Date.now() - player.scoring.guessStartTime) / 1000; // Convert to seconds
+    const guessScore = calculateGuessScore(result, timeTaken);
+    
     const newGuesses = [...player.guesses, player.currentGuess];
     const newGuessResults = [...player.guessResults, result];
 
@@ -190,20 +215,31 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
     }
 
     let newGameStatus: 'playing' | 'won' | 'lost' = 'playing';
-    let newScore = player.score;
+    const newScore = player.scoring.currentScore + guessScore.totalScore;
 
     // Check win condition
     if (player.currentGuess === targetWord) {
       newGameStatus = 'won';
-      newScore = calculateScore(newGuesses.length, 300 - timeLeft);
       setWinner('player');
       setGameActive(false);
+      
+      const performance = getPerformanceRating(guessScore);
       toast({
-        title: "You won!",
-        description: `Solved in ${newGuesses.length} guesses!`,
+        title: `${performance.emoji} You won!`,
+        description: `Solved in ${newGuesses.length} guesses! ${performance.rating} performance!`,
       });
     } else if (newGuesses.length >= maxGuesses) {
       newGameStatus = 'lost';
+    }
+
+    // Show score breakdown toast
+    if (guessScore.totalScore > 0) {
+      const breakdown = formatScoreBreakdown(guessScore);
+      const performance = getPerformanceRating(guessScore);
+      toast({
+        title: `+${guessScore.totalScore} points! ${performance.emoji}`,
+        description: breakdown,
+      });
     }
 
     setPlayer(prev => ({
@@ -213,11 +249,15 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
       usedLetters: newUsedLetters,
       currentGuess: '',
       gameStatus: newGameStatus,
-      score: newScore
+      scoring: {
+        currentScore: newScore,
+        lastGuessScore: guessScore,
+        guessStartTime: Date.now()
+      }
     }));
 
     // TODO: Emit guess to backend
-    // emitGuess({ guess: player.currentGuess, result, gameStatus: newGameStatus });
+    // emitGuess({ guess: player.currentGuess, result, gameStatus: newGameStatus, score: guessScore });
   };
 
   const formatTime = (seconds: number) => {
@@ -349,8 +389,19 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
               <CardTitle className="text-center text-xl text-gray-800 flex items-center justify-center gap-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 Opponent
-                <div className="text-sm font-normal">Score: {opponent.score}</div>
               </CardTitle>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                  <Zap className="w-5 h-5" />
+                  {opponent.scoring.currentScore}
+                </div>
+                <div className="text-sm text-gray-600">Score</div>
+                {opponent.scoring.lastGuessScore && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Last: +{opponent.scoring.lastGuessScore.totalScore} pts
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-4">
               {renderPlayerBoard(opponent, false)}
@@ -394,8 +445,19 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
               <CardTitle className="text-center text-xl text-gray-800 flex items-center justify-center gap-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 You
-                <div className="text-sm font-normal">Score: {player.score}</div>
               </CardTitle>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600 flex items-center justify-center gap-1">
+                  <Zap className="w-5 h-5" />
+                  {player.scoring.currentScore}
+                </div>
+                <div className="text-sm text-gray-600">Score</div>
+                {player.scoring.lastGuessScore && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Last: +{player.scoring.lastGuessScore.totalScore} pts
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-4">
               {renderPlayerBoard(player, true)}
@@ -405,6 +467,9 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
                   <div className="text-xs bg-gray-100 p-2 rounded">
                     <div><strong>Current Guess:</strong> {player.currentGuess}</div>
                     <div><strong>Used Letters:</strong> {Object.keys(player.usedLetters).join(', ')}</div>
+                    {player.scoring.lastGuessScore && (
+                      <div><strong>Last Score:</strong> {formatScoreBreakdown(player.scoring.lastGuessScore)}</div>
+                    )}
                   </div>
                 </div>
               )}
@@ -425,7 +490,7 @@ const RealtimeGame = ({ wordLength, onBack }: RealtimeGameProps) => {
         <div className="mt-8 text-center text-blue-100 text-sm">
           <p>
             Backend Integration Points: 
-            Socket events for real-time sync, opponent state updates, game matching
+            Socket events for real-time sync, opponent state updates, game matching, score synchronization
           </p>
         </div>
       </div>
