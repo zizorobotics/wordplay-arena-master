@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Users, Clock } from "lucide-react";
 import { getRandomWord, checkGuess, isValidWord } from "@/lib/gameLogic";
 import VirtualKeyboard from "@/components/VirtualKeyboard";
-import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "sonner";
 
 interface CooperativeGameProps {
@@ -14,7 +13,6 @@ interface CooperativeGameProps {
 }
 
 const CooperativeGame = ({ wordLength, onBack }: CooperativeGameProps) => {
-  const { currentTheme } = useTheme();
   const [targetWord] = useState(() => getRandomWord(wordLength));
   const [guesses, setGuesses] = useState<string[]>([]);
   const [currentGuess, setCurrentGuess] = useState('');
@@ -114,12 +112,12 @@ const CooperativeGame = ({ wordLength, onBack }: CooperativeGameProps) => {
           {guess.split('').map((letter, j) => (
             <div
               key={j}
-              className={`w-12 h-12 flex items-center justify-center text-white font-bold text-lg border-2 border-gray-300 ${
+              className={`w-12 h-12 flex items-center justify-center text-white font-bold text-lg border-2 ${
                 guessResult[j] === 'correct'
-                  ? currentTheme.colors.correct
+                  ? 'bg-green-500 border-green-500'
                   : guessResult[j] === 'present'
-                  ? currentTheme.colors.present
-                  : currentTheme.colors.absent
+                  ? 'bg-yellow-500 border-yellow-500'
+                  : 'bg-gray-500 border-gray-500'
               }`}
             >
               {letter}
@@ -164,7 +162,7 @@ const CooperativeGame = ({ wordLength, onBack }: CooperativeGameProps) => {
   };
 
   return (
-    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4`}>
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -188,55 +186,65 @@ const CooperativeGame = ({ wordLength, onBack }: CooperativeGameProps) => {
           <div className="w-24" /> {/* Spacer */}
         </div>
 
-        {/* Game Status */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center items-center gap-4 mb-4">
-            <Card className="bg-white/90">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${currentPlayer === 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    Player 1
-                  </div>
-                  {currentPlayer === 1 && !gameWon && !gameLost && (
-                    <div className="text-sm text-green-600 font-semibold">Your Turn</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+        {/* Main Game Card */}
+        <Card className="bg-white/95 shadow-xl mb-6">
+          <CardHeader>
+            <CardTitle className="text-center text-gray-800">
+              Guess {guesses.length + 1} of {maxGuesses}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Player Status */}
+            <div className="flex justify-center items-center gap-4 mb-6">
+              <div className={`px-4 py-2 rounded-lg ${currentPlayer === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                <div className="text-lg font-bold">Player 1</div>
+                {currentPlayer === 1 && !gameWon && !gameLost && (
+                  <div className="text-sm">Your Turn</div>
+                )}
+              </div>
 
-            <div className="text-white">
               {countdown > 0 && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-gray-600">
                   <Clock className="w-5 h-5" />
                   <span className="text-xl font-bold">{countdown}</span>
                 </div>
               )}
+
+              <div className={`px-4 py-2 rounded-lg ${currentPlayer === 2 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                <div className="text-lg font-bold">Player 2</div>
+                {currentPlayer === 2 && !gameWon && !gameLost && (
+                  <div className="text-sm">Your Turn</div>
+                )}
+              </div>
             </div>
 
-            <Card className="bg-white/90">
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <div className={`text-2xl font-bold ${currentPlayer === 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                    Player 2
-                  </div>
-                  {currentPlayer === 2 && !gameWon && !gameLost && (
-                    <div className="text-sm text-green-600 font-semibold">Your Turn</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="text-white mb-4">
-            <div className="text-lg font-semibold">
-              Guess {guesses.length + 1} of {maxGuesses}
+            {/* Game Grid */}
+            <div className="mb-6">
+              {renderGuessGrid()}
             </div>
-          </div>
-        </div>
+
+            {/* Game Over Messages */}
+            {gameWon && (
+              <div className="text-center p-4 bg-green-100 rounded-lg mb-4">
+                <h2 className="text-2xl font-bold text-green-800 mb-2">🎉 Congratulations!</h2>
+                <p className="text-green-700">You both solved it together!</p>
+                <p className="text-green-600 mt-2">The word was: <span className="font-bold">{targetWord}</span></p>
+              </div>
+            )}
+
+            {gameLost && (
+              <div className="text-center p-4 bg-red-100 rounded-lg mb-4">
+                <h2 className="text-2xl font-bold text-red-800 mb-2">Game Over</h2>
+                <p className="text-red-700">Better luck next time!</p>
+                <p className="text-red-600 mt-2">The word was: <span className="font-bold">{targetWord}</span></p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Recent Guesses */}
         {recentGuesses.length > 0 && (
-          <Card className="bg-white/90 mb-6">
+          <Card className="bg-white/95 mb-6">
             <CardHeader>
               <CardTitle className="text-center text-gray-800">Recent Guesses</CardTitle>
             </CardHeader>
@@ -252,51 +260,33 @@ const CooperativeGame = ({ wordLength, onBack }: CooperativeGameProps) => {
           </Card>
         )}
 
-        {/* Game Grid */}
-        <div className="mb-8">
-          {renderGuessGrid()}
-        </div>
-
-        {/* Game Over Messages */}
-        {gameWon && (
-          <Card className="bg-green-100 border-green-300 mb-6">
-            <CardContent className="text-center p-6">
-              <h2 className="text-2xl font-bold text-green-800 mb-2">🎉 Congratulations!</h2>
-              <p className="text-green-700">You both solved it together!</p>
-              <p className="text-green-600 mt-2">The word was: <span className="font-bold">{targetWord}</span></p>
-            </CardContent>
-          </Card>
-        )}
-
-        {gameLost && (
-          <Card className="bg-red-100 border-red-300 mb-6">
-            <CardContent className="text-center p-6">
-              <h2 className="text-2xl font-bold text-red-800 mb-2">Game Over</h2>
-              <p className="text-red-700">Better luck next time!</p>
-              <p className="text-red-600 mt-2">The word was: <span className="font-bold">{targetWord}</span></p>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Debug Mode - Two Keyboards */}
         <div className="space-y-6">
-          <div>
-            <h3 className="text-white text-center mb-2 font-semibold">Player 1 Keyboard</h3>
-            <VirtualKeyboard
-              onKeyPress={currentPlayer === 1 ? handleKeyPress : () => {}}
-              usedLetters={usedLetters}
-              disabled={currentPlayer !== 1 || !canGuess || gameWon || gameLost}
-            />
-          </div>
+          <Card className="bg-white/95">
+            <CardHeader>
+              <CardTitle className="text-center text-gray-800">Player 1 Keyboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VirtualKeyboard
+                onKeyPress={currentPlayer === 1 ? handleKeyPress : () => {}}
+                usedLetters={usedLetters}
+                disabled={currentPlayer !== 1 || !canGuess || gameWon || gameLost}
+              />
+            </CardContent>
+          </Card>
           
-          <div>
-            <h3 className="text-white text-center mb-2 font-semibold">Player 2 Keyboard</h3>
-            <VirtualKeyboard
-              onKeyPress={currentPlayer === 2 ? handleKeyPress : () => {}}
-              usedLetters={usedLetters}
-              disabled={currentPlayer !== 2 || !canGuess || gameWon || gameLost}
-            />
-          </div>
+          <Card className="bg-white/95">
+            <CardHeader>
+              <CardTitle className="text-center text-gray-800">Player 2 Keyboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <VirtualKeyboard
+                onKeyPress={currentPlayer === 2 ? handleKeyPress : () => {}}
+                usedLetters={usedLetters}
+                disabled={currentPlayer !== 2 || !canGuess || gameWon || gameLost}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
