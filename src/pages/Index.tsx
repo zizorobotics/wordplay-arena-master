@@ -1,24 +1,27 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Users, Clock, Target, Zap, Trophy, Star, Gem, Settings } from "lucide-react";
+import { Users, Clock, Target, Zap, Trophy, Star, Gem, Settings, Search } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
 import TurnBasedGame from "@/components/TurnBasedGame";
 import CooperativeGame from "@/components/CooperativeGame";
-import MatchmakingPage from "@/components/MatchmakingPage";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const Index = () => {
   const [gameMode, setGameMode] = useState<string | null>(null);
   const [wordLength, setWordLength] = useState(5);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
+  const [selectedModeForMatchmaking, setSelectedModeForMatchmaking] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [dots, setDots] = useState('');
   const [currentStatIndex, setCurrentStatIndex] = useState(0);
   const { currentTheme, isTransitioning } = useTheme();
 
-  // Stats data (without word rank)
+  // Stats data
   const statsData = [
     {
       icon: Trophy,
@@ -40,11 +43,11 @@ const Index = () => {
     },
     {
       icon: Star,
-      value: null, // Special case for level slider
+      value: null,
       label: "Level 1",
       color: "text-indigo-500",
       level: 1,
-      progress: 25 // 25% progress to next level
+      progress: 25
     }
   ];
 
@@ -56,6 +59,33 @@ const Index = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Animate dots for loading effect
+  useEffect(() => {
+    if (isSearching) {
+      const interval = setInterval(() => {
+        setDots(prev => {
+          if (prev.length >= 3) return '';
+          return prev + '.';
+        });
+      }, 500);
+
+      return () => clearInterval(interval);
+    }
+  }, [isSearching]);
+
+  // Simulate finding a player after 5 seconds
+  useEffect(() => {
+    if (isSearching) {
+      const timer = setTimeout(() => {
+        setIsSearching(false);
+        setShowMatchmaking(false);
+        setGameMode(selectedModeForMatchmaking);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSearching, selectedModeForMatchmaking]);
 
   const gameModes = [
     {
@@ -95,33 +125,15 @@ const Index = () => {
   const wordLengths = [4, 5, 6];
 
   const handleMultiplayerMode = (mode: string) => {
-    setGameMode(mode);
+    setSelectedModeForMatchmaking(mode);
     setShowMatchmaking(true);
-  };
-
-  const handlePlayerFound = () => {
-    setShowMatchmaking(false);
-  };
-
-  const handleBackFromMatchmaking = () => {
-    setGameMode(null);
-    setShowMatchmaking(false);
+    setIsSearching(true);
+    setDots('');
   };
 
   const handleBackFromGame = () => {
     setGameMode(null);
   };
-
-  // Show matchmaking for all multiplayer modes
-  if (showMatchmaking && (gameMode === 'realtime' || gameMode === 'turnbased' || gameMode === 'cooperative')) {
-    return (
-      <MatchmakingPage 
-        wordLength={wordLength} 
-        onBack={handleBackFromMatchmaking}
-        onPlayerFound={handlePlayerFound}
-      />
-    );
-  }
 
   // Show the actual games after matchmaking
   if (gameMode === 'realtime') {
@@ -179,16 +191,16 @@ const Index = () => {
         </div>
 
         {/* Game Modes */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className={`relative grid md:grid-cols-2 gap-6 mb-8 transition-all duration-300 ${showMatchmaking ? 'blur-sm' : ''}`}>
           {gameModes.map((mode) => {
             const IconComponent = mode.icon;
+            const isSelected = selectedModeForMatchmaking === mode.id;
             const handleClick = () => {
               if (!mode.available) return;
               
               if (mode.id === 'solo') {
                 setGameMode(mode.id);
               } else {
-                // All multiplayer modes use matchmaking
                 handleMultiplayerMode(mode.id);
               }
             };
@@ -200,7 +212,7 @@ const Index = () => {
                   mode.available 
                     ? "bg-white/95 hover:bg-white shadow-xl hover:shadow-2xl" 
                     : "bg-gray-300/50 cursor-not-allowed"
-                }`}
+                } ${isSelected && showMatchmaking ? 'ring-4 ring-blue-400 scale-105' : ''}`}
                 onClick={handleClick}
               >
                 <CardHeader className="pb-4">
@@ -235,8 +247,58 @@ const Index = () => {
           })}
         </div>
 
+        {/* Matchmaking Overlay */}
+        {showMatchmaking && (
+          <div className="absolute inset-0 flex items-center justify-center z-50">
+            <Card className="bg-white/95 border-0 shadow-2xl max-w-md w-full mx-4">
+              <CardContent className="p-12 text-center">
+                <div className="mb-8">
+                  <div className="relative">
+                    <Search className="w-16 h-16 text-blue-500 mx-auto animate-pulse" />
+                    <div className="absolute -top-2 -right-2">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full animate-ping"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                  Finding an opponent{dots}
+                </h2>
+                
+                <p className="text-gray-600 mb-8">
+                  Searching for players ready to battle
+                </p>
+
+                {/* Loading Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+                  <div className="bg-blue-500 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                </div>
+
+                {/* Player Count Simulation */}
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <Users className="w-4 h-4" />
+                  <span>1,247 players online</span>
+                </div>
+
+                {/* Cancel Button */}
+                <Button
+                  onClick={() => {
+                    setShowMatchmaking(false);
+                    setIsSearching(false);
+                    setSelectedModeForMatchmaking(null);
+                  }}
+                  variant="outline"
+                  className="mt-6"
+                >
+                  Cancel
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Bottom Section - Three Divs */}
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className={`grid grid-cols-3 gap-6 mb-8 transition-all duration-300 ${showMatchmaking ? 'blur-sm' : ''}`}>
           {/* Left: Rotating Stats Display */}
           <div className="flex justify-center">
             <Card className="bg-white/90 border-0 w-full">
@@ -250,7 +312,6 @@ const Index = () => {
                   {currentStat.value ? (
                     <h3 className="text-3xl font-bold text-gray-800 mb-2">{currentStat.value}</h3>
                   ) : (
-                    // Special level display with slider
                     <div className="mb-4">
                       <h3 className="text-2xl font-bold text-gray-800 mb-3">{currentStat.label}</h3>
                       <div className="px-4">
@@ -301,7 +362,7 @@ const Index = () => {
         </div>
 
         {/* Footer */}
-        <div className="text-center text-blue-100 mt-12">
+        <div className={`text-center text-blue-100 mt-12 transition-all duration-300 ${showMatchmaking ? 'blur-sm' : ''}`}>
           <p>Ready to challenge your word skills? Choose your game mode and let's play!</p>
         </div>
       </div>
