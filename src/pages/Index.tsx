@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, Target, Zap, Trophy, Star } from "lucide-react";
+import { Users, Clock, Target, Zap, Trophy, Star, Gem } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
 import TurnBasedGame from "@/components/TurnBasedGame";
@@ -203,9 +202,9 @@ const Index = () => {
           </Card>
           <Card className="bg-white/90 border-0">
             <CardContent className="text-center p-6">
-              <Target className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <h3 className="text-2xl font-bold text-gray-800">4.2</h3>
-              <p className="text-gray-600">Avg Guesses</p>
+              <Gem className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+              <h3 className="text-2xl font-bold text-gray-800">10</h3>
+              <p className="text-gray-600">Gems</p>
             </CardContent>
           </Card>
           <Card className="bg-white/90 border-0">
