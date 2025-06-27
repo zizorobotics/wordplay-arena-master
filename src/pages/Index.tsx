@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Users, Clock, Target, Zap, Trophy, Star, Gem } from "lucide-react";
+import { Users, Clock, Target, Zap, Trophy, Star, Gem, Settings } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
 import TurnBasedGame from "@/components/TurnBasedGame";
@@ -18,7 +18,7 @@ const Index = () => {
   const [currentStatIndex, setCurrentStatIndex] = useState(0);
   const { currentTheme, isTransitioning } = useTheme();
 
-  // Stats data
+  // Stats data (without word rank)
   const statsData = [
     {
       icon: Trophy,
@@ -235,44 +235,69 @@ const Index = () => {
           })}
         </div>
 
-        {/* Rotating Stats Display */}
-        <div className="flex justify-center mb-8">
-          <Card className="bg-white/90 border-0 w-80">
-            <CardContent className="text-center p-6 overflow-hidden">
-              <div
-                key={currentStatIndex}
-                className="animate-slide-in-up transition-all duration-500 ease-out"
-              >
-                <IconComponent className={`w-12 h-12 ${currentStat.color} mx-auto mb-4`} />
-                
-                {currentStat.value ? (
-                  <h3 className="text-3xl font-bold text-gray-800 mb-2">{currentStat.value}</h3>
-                ) : (
-                  // Special level display with slider
-                  <div className="mb-4">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-3">{currentStat.label}</h3>
-                    <div className="px-4">
-                      <Slider
-                        value={[currentStat.progress || 0]}
-                        max={100}
-                        step={1}
-                        className="w-full"
-                        disabled
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>Level {currentStat.level}</span>
-                        <span>Level {(currentStat.level || 1) + 1}</span>
+        {/* Bottom Section - Three Divs */}
+        <div className="grid grid-cols-3 gap-6 mb-8">
+          {/* Left: Rotating Stats Display */}
+          <div className="flex justify-center">
+            <Card className="bg-white/90 border-0 w-full">
+              <CardContent className="text-center p-6 overflow-hidden">
+                <div
+                  key={currentStatIndex}
+                  className="animate-slide-in-up transition-all duration-500 ease-out"
+                >
+                  <IconComponent className={`w-12 h-12 ${currentStat.color} mx-auto mb-4`} />
+                  
+                  {currentStat.value ? (
+                    <h3 className="text-3xl font-bold text-gray-800 mb-2">{currentStat.value}</h3>
+                  ) : (
+                    // Special level display with slider
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-3">{currentStat.label}</h3>
+                      <div className="px-4">
+                        <Slider
+                          value={[currentStat.progress || 0]}
+                          max={100}
+                          step={1}
+                          className="w-full"
+                          disabled
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Level {currentStat.level}</span>
+                          <span>Level {(currentStat.level || 1) + 1}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-                
-                {currentStat.value && (
-                  <p className="text-gray-600 text-lg">{currentStat.label}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  )}
+                  
+                  {currentStat.value && (
+                    <p className="text-gray-600 text-lg">{currentStat.label}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Center: Settings */}
+          <div className="flex justify-center">
+            <Card className="bg-white/90 border-0 w-full cursor-pointer hover:bg-white/95 transition-all duration-200">
+              <CardContent className="text-center p-6">
+                <Settings className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">Settings</h3>
+                <p className="text-gray-600 text-lg">Customize Game</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right: Leaderboard & Word Rank */}
+          <div className="flex justify-center">
+            <Card className="bg-white/90 border-0 w-full cursor-pointer hover:bg-white/95 transition-all duration-200">
+              <CardContent className="text-center p-6">
+                <Star className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">500</h3>
+                <p className="text-gray-600 text-lg">Word Rank</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Footer */}
@@ -281,22 +306,24 @@ const Index = () => {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes slide-in-up {
-          0% {
-            opacity: 0;
-            transform: translateY(20px);
+      <style>
+        {`
+          @keyframes slide-in-up {
+            0% {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            100% {
+              opacity: 1;
+              transform: translateY(0);
+            }
           }
-          100% {
-            opacity: 1;
-            transform: translateY(0);
+          
+          .animate-slide-in-up {
+            animation: slide-in-up 0.5s ease-out;
           }
-        }
-        
-        .animate-slide-in-up {
-          animation: slide-in-up 0.5s ease-out;
-        }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
