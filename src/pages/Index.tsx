@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Users, Clock, Target, Zap, Trophy, Star, Gem } from "lucide-react";
 import GameBoard from "@/components/GameBoard";
 import RealtimeGame from "@/components/RealtimeGame";
@@ -14,7 +15,47 @@ const Index = () => {
   const [gameMode, setGameMode] = useState<string | null>(null);
   const [wordLength, setWordLength] = useState(5);
   const [showMatchmaking, setShowMatchmaking] = useState(false);
+  const [currentStatIndex, setCurrentStatIndex] = useState(0);
   const { currentTheme, isTransitioning } = useTheme();
+
+  // Stats data
+  const statsData = [
+    {
+      icon: Trophy,
+      value: "0",
+      label: "Games Won",
+      color: "text-yellow-500"
+    },
+    {
+      icon: Target,
+      value: "2,450",
+      label: "Total Points",
+      color: "text-blue-500"
+    },
+    {
+      icon: Gem,
+      value: "10",
+      label: "Gems",
+      color: "text-purple-500"
+    },
+    {
+      icon: Star,
+      value: null, // Special case for level slider
+      label: "Level 1",
+      color: "text-indigo-500",
+      level: 1,
+      progress: 25 // 25% progress to next level
+    }
+  ];
+
+  // Rotate stats every 3.5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStatIndex((prevIndex) => (prevIndex + 1) % statsData.length);
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const gameModes = [
     {
@@ -99,6 +140,9 @@ const Index = () => {
   if (gameMode) {
     return <GameBoard gameMode={gameMode} wordLength={wordLength} onBack={handleBackFromGame} />;
   }
+
+  const currentStat = statsData[currentStatIndex];
+  const IconComponent = currentStat.icon;
 
   return (
     <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
@@ -191,27 +235,42 @@ const Index = () => {
           })}
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-white/90 border-0">
-            <CardContent className="text-center p-6">
-              <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-              <h3 className="text-2xl font-bold text-gray-800">0</h3>
-              <p className="text-gray-600">Games Won</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/90 border-0">
-            <CardContent className="text-center p-6">
-              <Gem className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <h3 className="text-2xl font-bold text-gray-800">10</h3>
-              <p className="text-gray-600">Gems</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/90 border-0">
-            <CardContent className="text-center p-6">
-              <Star className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <h3 className="text-2xl font-bold text-gray-800">500</h3>
-              <p className="text-gray-600">Word Rank</p>
+        {/* Rotating Stats Display */}
+        <div className="flex justify-center mb-8">
+          <Card className="bg-white/90 border-0 w-80">
+            <CardContent className="text-center p-6 overflow-hidden">
+              <div
+                key={currentStatIndex}
+                className="animate-slide-in-up transition-all duration-500 ease-out"
+              >
+                <IconComponent className={`w-12 h-12 ${currentStat.color} mx-auto mb-4`} />
+                
+                {currentStat.value ? (
+                  <h3 className="text-3xl font-bold text-gray-800 mb-2">{currentStat.value}</h3>
+                ) : (
+                  // Special level display with slider
+                  <div className="mb-4">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-3">{currentStat.label}</h3>
+                    <div className="px-4">
+                      <Slider
+                        value={[currentStat.progress || 0]}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                        disabled
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Level {currentStat.level}</span>
+                        <span>Level {(currentStat.level || 1) + 1}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {currentStat.value && (
+                  <p className="text-gray-600 text-lg">{currentStat.label}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -221,6 +280,23 @@ const Index = () => {
           <p>Ready to challenge your word skills? Choose your game mode and let's play!</p>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes slide-in-up {
+          0% {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-slide-in-up {
+          animation: slide-in-up 0.5s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
