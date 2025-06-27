@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Users, Search } from "lucide-react";
+import { ArrowLeft, Users, Search, Clock, Zap } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
 interface MatchmakingPageProps {
@@ -15,6 +15,17 @@ const MatchmakingPage = ({ wordLength, onBack, onPlayerFound }: MatchmakingPageP
   const [isSearching, setIsSearching] = useState(true);
   const [dots, setDots] = useState('');
   const { currentTheme, isTransitioning } = useTheme();
+
+  // Get current game mode from URL or context - for now we'll use a generic title
+  const getGameModeTitle = () => {
+    // You could pass gameMode as a prop if needed, for now using generic title
+    return "Multiplayer Match";
+  };
+
+  const getGameModeIcon = () => {
+    // Default to Users icon for all multiplayer modes
+    return Users;
+  };
 
   // Animate dots for loading effect
   useEffect(() => {
@@ -40,6 +51,8 @@ const MatchmakingPage = ({ wordLength, onBack, onPlayerFound }: MatchmakingPageP
     return () => clearTimeout(timer);
   }, [onPlayerFound]);
 
+  const IconComponent = getGameModeIcon();
+
   return (
     <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="max-w-4xl mx-auto">
@@ -55,7 +68,7 @@ const MatchmakingPage = ({ wordLength, onBack, onPlayerFound }: MatchmakingPageP
           </Button>
           
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-white">1v1 Real-Time</h1>
+            <h1 className="text-3xl font-bold text-white">{getGameModeTitle()}</h1>
             <p className="text-blue-100">Word Length: {wordLength} letters</p>
           </div>
 
@@ -102,7 +115,7 @@ const MatchmakingPage = ({ wordLength, onBack, onPlayerFound }: MatchmakingPageP
                   {/* Player Found Animation */}
                   <div className="mb-8">
                     <div className="relative">
-                      <Users className="w-16 h-16 text-green-500 mx-auto animate-scale-in" />
+                      <IconComponent className="w-16 h-16 text-green-500 mx-auto animate-scale-in" />
                       <div className="absolute -top-2 -right-2">
                         <div className="w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
                       </div>

@@ -54,8 +54,8 @@ const Index = () => {
 
   const wordLengths = [4, 5, 6];
 
-  const handleRealtimeMode = () => {
-    setGameMode('realtime');
+  const handleMultiplayerMode = (mode: string) => {
+    setGameMode(mode);
     setShowMatchmaking(true);
   };
 
@@ -63,33 +63,42 @@ const Index = () => {
     setShowMatchmaking(false);
   };
 
-  if (showMatchmaking && gameMode === 'realtime') {
+  const handleBackFromMatchmaking = () => {
+    setGameMode(null);
+    setShowMatchmaking(false);
+  };
+
+  const handleBackFromGame = () => {
+    setGameMode(null);
+  };
+
+  // Show matchmaking for all multiplayer modes
+  if (showMatchmaking && (gameMode === 'realtime' || gameMode === 'turnbased' || gameMode === 'cooperative')) {
     return (
       <MatchmakingPage 
         wordLength={wordLength} 
-        onBack={() => {
-          setGameMode(null);
-          setShowMatchmaking(false);
-        }} 
+        onBack={handleBackFromMatchmaking}
         onPlayerFound={handlePlayerFound}
       />
     );
   }
 
+  // Show the actual games after matchmaking
   if (gameMode === 'realtime') {
-    return <RealtimeGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
+    return <RealtimeGame wordLength={wordLength} onBack={handleBackFromGame} />;
   }
 
   if (gameMode === 'turnbased') {
-    return <TurnBasedGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
+    return <TurnBasedGame wordLength={wordLength} onBack={handleBackFromGame} />;
   }
 
   if (gameMode === 'cooperative') {
-    return <CooperativeGame wordLength={wordLength} onBack={() => setGameMode(null)} />;
+    return <CooperativeGame wordLength={wordLength} onBack={handleBackFromGame} />;
   }
 
+  // Solo mode doesn't need matchmaking
   if (gameMode) {
-    return <GameBoard gameMode={gameMode} wordLength={wordLength} onBack={() => setGameMode(null)} />;
+    return <GameBoard gameMode={gameMode} wordLength={wordLength} onBack={handleBackFromGame} />;
   }
 
   return (
@@ -130,7 +139,16 @@ const Index = () => {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {gameModes.map((mode) => {
             const IconComponent = mode.icon;
-            const handleClick = mode.id === 'realtime' ? handleRealtimeMode : () => mode.available && setGameMode(mode.id);
+            const handleClick = () => {
+              if (!mode.available) return;
+              
+              if (mode.id === 'solo') {
+                setGameMode(mode.id);
+              } else {
+                // All multiplayer modes use matchmaking
+                handleMultiplayerMode(mode.id);
+              }
+            };
             
             return (
               <Card 
