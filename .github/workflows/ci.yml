@@ -1,0 +1,64 @@
+# .github/workflows/ci.yml
+
+name: Continuous Integration
+
+# This workflow runs on every push to the `main` branch
+# and for every pull request targeting the `main` branch.
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # Job to test the Dart Frog backend server
+  test-server:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: '3.3' # Use the same version as in Dockerfile and pubspec
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Analyze project source
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        run: dart test
+
+  # Job to build the React client to ensure it's not broken
+  build-client:
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        # Use `npm ci` for faster, more reliable installs in CI environments
+        run: npm ci
+
+      - name: Build client application
+        run: npm run build

@@ -27,15 +27,15 @@ const VirtualKeyboard = ({ onKeyPress, usedLetters, disabled = false }: VirtualK
     } else {
       switch (status) {
         case 'correct':
-          bgColor = currentTheme.colors.correct.replace('bg-', 'bg-') + ' hover:opacity-80';
+          bgColor = currentTheme.colors.correct + ' hover:opacity-80';
           textColor = 'text-white';
           break;
         case 'present':
-          bgColor = currentTheme.colors.present.replace('bg-', 'bg-') + ' hover:opacity-80';
+          bgColor = currentTheme.colors.present + ' hover:opacity-80';
           textColor = 'text-white';
           break;
         case 'absent':
-          bgColor = currentTheme.colors.absent.replace('bg-', 'bg-') + ' hover:opacity-80';
+          bgColor = currentTheme.colors.absent + ' hover:opacity-80';
           textColor = 'text-white';
           break;
       }

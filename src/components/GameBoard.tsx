@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, RotateCcw, Loader2 } from "lucide-react";
 import VirtualKeyboard from "./VirtualKeyboard";
 import GameStats from "./GameStats";
 import ThemeSelector from "./ThemeSelector";
-import { checkGuess, getRandomWord, isValidWord } from "@/lib/gameLogic";
+import { checkGuess, startNewGame, isValidWord } from "@/lib/gameLogic";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -18,34 +18,60 @@ interface GameBoardProps {
 type GuessResult = 'correct' | 'present' | 'absent' | '';
 
 const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
-  const [targetWord, setTargetWord] = useState('');
+  // A unique ID for the game session, generated client-side.
+  const [sessionId, setSessionId] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isChecking, setIsChecking] = useState(false);
+
   const [currentGuess, setCurrentGuess] = useState('');
   const [guesses, setGuesses] = useState<string[]>([]);
   const [guessResults, setGuessResults] = useState<GuessResult[][]>([]);
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [usedLetters, setUsedLetters] = useState<Record<string, GuessResult>>({});
+  
   const { toast } = useToast();
   const { currentTheme, isTransitioning } = useTheme();
 
   const maxGuesses = 6;
 
-  useEffect(() => {
-    startNewGame();
-  }, [wordLength]);
+  // Function to initialize or restart the game
+  const handleStartNewGame = useCallback(async () => {
+    setIsLoading(true);
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
+    
+    try {
+      const response = await startNewGame(wordLength, newSessionId);
+      if (response.success) {
+        setCurrentGuess('');
+        setGuesses([]);
+        setGuessResults([]);
+        setGameStatus('playing');
+        setUsedLetters({});
+      } else {
+        toast({
+          title: "Error",
+          description: `Could not start a new game: ${response.message}`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Network Error",
+        description: "Failed to communicate with the server.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [wordLength, toast]);
 
-  const startNewGame = () => {
-    const newWord = getRandomWord(wordLength);
-    setTargetWord(newWord);
-    setCurrentGuess('');
-    setGuesses([]);
-    setGuessResults([]);
-    setGameStatus('playing');
-    setUsedLetters({});
-    console.log('New game started with word:', newWord); // For debugging
-  };
+  useEffect(() => {
+    handleStartNewGame();
+  }, [wordLength, handleStartNewGame]); // Include the function in dependencies
 
   const handleKeyPress = (key: string) => {
-    if (gameStatus !== 'playing') return;
+    if (gameStatus !== 'playing' || isChecking) return;
 
     if (key === 'ENTER') {
       submitGuess();
@@ -58,61 +84,59 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
     }
   };
 
-  const submitGuess = () => {
+  const submitGuess = async () => {
     if (currentGuess.length !== wordLength) {
-      toast({
-        title: "Invalid guess",
-        description: `Word must be ${wordLength} letters long`,
-        variant: "destructive"
-      });
+      toast({ title: "Invalid guess", description: `Word must be ${wordLength} letters long`, variant: "destructive" });
       return;
     }
 
-    if (!isValidWord(currentGuess)) {
-      toast({
-        title: "Invalid word",
-        description: "Please enter a valid word",
-        variant: "destructive"
-      });
+    setIsChecking(true);
+    const wordIsValid = await isValidWord(currentGuess);
+    if (!wordIsValid) {
+      toast({ title: "Invalid word", description: "Please enter a valid word", variant: "destructive" });
+      setIsChecking(false);
       return;
     }
 
-    const result = checkGuess(currentGuess, targetWord);
-    const newGuesses = [...guesses, currentGuess];
-    const newGuessResults = [...guessResults, result];
-
-    // Update used letters
-    const newUsedLetters = { ...usedLetters };
-    for (let i = 0; i < currentGuess.length; i++) {
-      const letter = currentGuess[i];
-      const letterResult = result[i];
+    try {
+      const result = await checkGuess(currentGuess, sessionId);
       
-      if (!newUsedLetters[letter] || 
-          (newUsedLetters[letter] === 'absent' && letterResult !== 'absent') ||
-          (newUsedLetters[letter] === 'present' && letterResult === 'correct')) {
-        newUsedLetters[letter] = letterResult;
+      // Use functional updates to ensure atomic state changes
+      setGuesses(prevGuesses => {
+        const newGuesses = [...prevGuesses, currentGuess];
+
+      // Update used letters based on the result from the backend
+        setUsedLetters(prevUsedLetters => {
+          const newUsedLetters = { ...prevUsedLetters };
+      for (let i = 0; i < currentGuess.length; i++) {
+        const letter = currentGuess[i];
+        const letterResult = result[i];
+        if (!newUsedLetters[letter] || (newUsedLetters[letter] === 'absent' && letterResult !== 'absent') || (newUsedLetters[letter] === 'present' && letterResult === 'correct')) {
+          newUsedLetters[letter] = letterResult;
+        }
       }
-    }
+          return newUsedLetters;
+        });
 
-    setGuesses(newGuesses);
-    setGuessResults(newGuessResults);
-    setUsedLetters(newUsedLetters);
-    setCurrentGuess('');
+        setGuessResults(prevResults => [...prevResults, result]);
 
-    // Check win condition
-    if (currentGuess === targetWord) {
-      setGameStatus('won');
-      toast({
-        title: "Congratulations!",
-        description: `You won in ${newGuesses.length} guess${newGuesses.length === 1 ? '' : 'es'}!`,
+      // Check win condition
+      if (result.every(r => r === 'correct')) {
+        setGameStatus('won');
+        toast({ title: "Congratulations!", description: `You won in ${newGuesses.length} guess${newGuesses.length === 1 ? '' : 'es'}!` });
+      } else if (newGuesses.length >= maxGuesses) {
+        setGameStatus('lost');
+        // The backend could optionally send the correct word upon game over
+        toast({ title: "Game Over", description: "Better luck next time!", variant: "destructive" });
+      }
+        
+        return newGuesses;
       });
-    } else if (newGuesses.length >= maxGuesses) {
-      setGameStatus('lost');
-      toast({
-        title: "Game Over",
-        description: `The word was: ${targetWord}`,
-        variant: "destructive"
-      });
+    } catch (error) {
+      toast({ title: "Submission Error", description: (error as Error).message, variant: "destructive" });
+    } finally {
+      setCurrentGuess('');
+      setIsChecking(false);
     }
   };
 
@@ -122,18 +146,9 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
 
     if (!isCurrentGuess) {
       switch (result) {
-        case 'correct':
-          bgColor = currentTheme.colors.correct;
-          textColor = 'text-white';
-          break;
-        case 'present':
-          bgColor = currentTheme.colors.present;
-          textColor = 'text-white';
-          break;
-        case 'absent':
-          bgColor = currentTheme.colors.absent;
-          textColor = 'text-white';
-          break;
+        case 'correct': bgColor = currentTheme.colors.correct; textColor = 'text-white'; break;
+        case 'present': bgColor = currentTheme.colors.present; textColor = 'text-white'; break;
+        case 'absent': bgColor = currentTheme.colors.absent; textColor = 'text-white'; break;
       }
     } else if (letter) {
       bgColor = currentTheme.colors.current;
@@ -141,38 +156,34 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
     }
 
     return (
-      <div
-        key={index}
-        className={`w-14 h-14 border-2 flex items-center justify-center text-2xl font-bold rounded-lg transition-all duration-300 ${bgColor} ${textColor}`}
-      >
+      <div key={index} className={`w-14 h-14 border-2 flex items-center justify-center text-2xl font-bold rounded-lg transition-all duration-300 ${bgColor} ${textColor}`}>
         {letter}
       </div>
     );
   };
+  
+  if (isLoading) {
+    return (
+        <div className={`min-h-screen flex items-center justify-center ${currentTheme.background}`}>
+            <Loader2 className="w-16 h-16 text-white animate-spin" />
+            <p className="text-white text-2xl ml-4">Starting New Game...</p>
+        </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4 transition-all duration-300 ease-in-out ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            className="bg-white/20 text-white border-white/30 hover:bg-white/30"
-          >
+          <Button variant="outline" onClick={onBack} className="bg-white/20 text-white border-white/30 hover:bg-white/30">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Menu
+            Back
           </Button>
-          <h1 className="text-3xl font-bold text-white">
-            {gameMode === 'solo' ? 'Solo Play' : gameMode}
-          </h1>
+          <h1 className="text-3xl font-bold text-white">{gameMode === 'solo' ? 'Solo Play' : gameMode}</h1>
           <div className="flex gap-2">
             <ThemeSelector />
-            <Button
-              variant="outline"
-              onClick={startNewGame}
-              className="bg-white/20 text-white border-white/30 hover:bg-white/30"
-            >
+            <Button variant="outline" onClick={handleStartNewGame} className="bg-white/20 text-white border-white/30 hover:bg-white/30">
               <RotateCcw className="w-4 h-4 mr-2" />
               New Game
             </Button>
@@ -184,74 +195,40 @@ const GameBoard = ({ gameMode, wordLength, onBack }: GameBoardProps) => {
           <div className="lg:col-span-2">
             <Card className="bg-white/95 border-0 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-center text-2xl text-gray-800">
-                  {wordLength} Letter Word
-                </CardTitle>
+                <CardTitle className="text-center text-2xl text-gray-800">{wordLength} Letter Word</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center gap-2 mb-8">
-                  {/* Previous guesses */}
-                  {guesses.map((guess, rowIndex) => (
+                  {/* Render board */}
+                  {Array.from({ length: maxGuesses }).map((_, rowIndex) => (
                     <div key={rowIndex} className="flex gap-2">
-                      {guess.split('').map((letter, colIndex) =>
-                        renderTile(letter, guessResults[rowIndex][colIndex], colIndex)
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Current guess row */}
-                  {gameStatus === 'playing' && guesses.length < maxGuesses && (
-                    <div className="flex gap-2">
-                      {Array.from({ length: wordLength }).map((_, index) =>
-                        renderTile(
-                          currentGuess[index] || '', 
-                          '', 
-                          index, 
-                          true
-                        )
-                      )}
-                    </div>
-                  )}
-
-                  {/* Empty rows */}
-                  {Array.from({ length: maxGuesses - guesses.length - (gameStatus === 'playing' ? 1 : 0) }).map((_, rowIndex) => (
-                    <div key={rowIndex} className="flex gap-2">
-                      {Array.from({ length: wordLength }).map((_, colIndex) =>
-                        renderTile('', '', colIndex)
-                      )}
+                      {Array.from({ length: wordLength }).map((_, colIndex) => {
+                        const guess = guesses[rowIndex];
+                        const result = guessResults[rowIndex]?.[colIndex];
+                        const letter = guess ? guess[colIndex] : (rowIndex === guesses.length && currentGuess[colIndex]) || '';
+                        const isCurrentRow = rowIndex === guesses.length;
+                        return renderTile(letter, result || '', colIndex, isCurrentRow && !!letter);
+                      })}
                     </div>
                   ))}
                 </div>
-
-                {/* Game Status */}
+                
                 {gameStatus !== 'playing' && (
                   <div className="text-center mb-6">
                     <div className={`text-2xl font-bold mb-2 ${gameStatus === 'won' ? 'text-green-600' : 'text-red-600'}`}>
                       {gameStatus === 'won' ? '🎉 You Won!' : '😔 You Lost!'}
                     </div>
-                    <div className="text-lg text-gray-600">
-                      {gameStatus === 'won' 
-                        ? `Solved in ${guesses.length} guess${guesses.length === 1 ? '' : 'es'}!`
-                        : `The word was: ${targetWord}`
-                      }
-                    </div>
                   </div>
                 )}
-
-                {/* Virtual Keyboard */}
-                <VirtualKeyboard onKeyPress={handleKeyPress} usedLetters={usedLetters} />
+                
+                <VirtualKeyboard onKeyPress={handleKeyPress} usedLetters={usedLetters} disabled={gameStatus !== 'playing' || isChecking} />
               </CardContent>
             </Card>
           </div>
 
           {/* Stats Sidebar */}
           <div className="lg:col-span-1">
-            <GameStats 
-              guesses={guesses.length}
-              maxGuesses={maxGuesses}
-              gameStatus={gameStatus}
-              wordLength={wordLength}
-            />
+            <GameStats guesses={guesses.length} maxGuesses={maxGuesses} gameStatus={gameStatus} wordLength={wordLength}/>
           </div>
         </div>
       </div>

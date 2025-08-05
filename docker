@@ -1,0 +1,40 @@
+# Use the official Dart SDK as a build environment.
+# Using a specific version ensures build consistency.
+FROM dart:3.3 as build
+
+WORKDIR /app
+
+# Copy the server's pubspec files and get dependencies.
+# This step is separated to leverage Docker's layer caching.
+COPY server/pubspec.* ./
+RUN dart pub get
+
+# Copy the rest of the server source code.
+COPY server/ .
+
+# Compile the application.
+# This creates a self-contained, native executable.
+RUN dart compile exe bin/server.dart -o bin/server
+
+# --- Release Stage ---
+
+# Use a minimal base image for the final container to reduce size.
+# SCRATCH is a special empty image. We add only what's necessary.
+FROM scratch
+
+# Copy the compiled executable from the build stage.
+COPY --from=build /app/bin/server /app/bin/server
+
+# Copy the .env file with environment variables.
+# Ensure this file is present during the `docker build` command.
+# For production, it's better to inject environment variables at runtime.
+COPY server/.env ./.env
+
+# Set the working directory.
+WORKDIR /app
+
+# Expose the port the server will run on.
+EXPOSE 8080
+
+# The command to run when the container starts.
+CMD ["/app/bin/server"]

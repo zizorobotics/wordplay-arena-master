@@ -1,294 +1,163 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Users, Clock } from "lucide-react";
-import { getRandomWord, checkGuess, isValidWord } from "@/lib/gameLogic";
-import VirtualKeyboard from "@/components/VirtualKeyboard";
-import { toast } from "sonner";
+import { ArrowLeft, Users, Loader2, RefreshCw } from "lucide-react";
+import VirtualKeyboard from "./VirtualKeyboard";
+import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/contexts/ThemeContext";
+import { GameState, initialGameState, GuessResult } from "@/types/game";
+import { useGameSocket } from "@/hooks/useGameSocket";
 
-interface CooperativeGameProps {
-  wordLength: number;
-  onBack: () => void;
-}
+const CooperativeGame = ({ wordLength, onBack, sessionId, currentUserId }: { wordLength: number; onBack: () => void; sessionId: string, currentUserId: string }) => {
+  const { gameState: wsGameState, sendMessage, isConnected } = useGameSocket(sessionId);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentGuess, setCurrentGuess] = useState("");
+  const { toast } = useToast();
+  const { currentTheme, isTransitioning } = useTheme();
 
-const CooperativeGame = ({ wordLength, onBack }: CooperativeGameProps) => {
-  const [targetWord] = useState(() => getRandomWord(wordLength));
-  const [guesses, setGuesses] = useState<string[]>([]);
-  const [currentGuess, setCurrentGuess] = useState('');
-  const [gameWon, setGameWon] = useState(false);
-  const [gameLost, setGameLost] = useState(false);
-  const [usedLetters, setUsedLetters] = useState<Record<string, 'correct' | 'present' | 'absent' | ''>>({});
-  const [currentPlayer, setCurrentPlayer] = useState<1 | 2>(1);
-  const [canGuess, setCanGuess] = useState(true);
-  const [countdown, setCountdown] = useState(0);
-  const [recentGuesses, setRecentGuesses] = useState<{player: number, word: string}[]>([]);
-
-  const maxGuesses = 6;
+  const isMyTurn = wsGameState?.currentPlayerId === currentUserId;
+  const activePlayerName = wsGameState?.players[wsGameState?.currentPlayerId]?.name || 'A player';
 
   useEffect(() => {
-    console.log('New cooperative game started with word:', targetWord);
-  }, [targetWord]);
-
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0 && !canGuess) {
-      setCanGuess(true);
+    if (isConnected && isMyTurn) {
+        toast({ title: "It's your turn!", description: "Work together to find the word." });
     }
-  }, [countdown, canGuess]);
+  }, [isConnected, isMyTurn, toast]);
 
   const handleKeyPress = (key: string) => {
-    if (!canGuess || gameWon || gameLost) return;
+    if (!isMyTurn || wsGameState?.status !== 'playing' || isSubmitting) return;
 
     if (key === 'ENTER') {
-      if (currentGuess.length === wordLength) {
-        if (isValidWord(currentGuess)) {
-          makeGuess();
-        } else {
-          toast.error('Not a valid word!');
-        }
-      } else {
-        toast.error(`Word must be ${wordLength} letters long!`);
-      }
+      submitGuess();
     } else if (key === 'BACKSPACE') {
       setCurrentGuess(prev => prev.slice(0, -1));
-    } else if (currentGuess.length < wordLength && /^[A-Z]$/.test(key)) {
-      setCurrentGuess(prev => prev + key);
-    }
-  };
-
-  const makeGuess = () => {
-    const guessResult = checkGuess(currentGuess, targetWord);
-    const newGuesses = [...guesses, currentGuess];
-    setGuesses(newGuesses);
-    
-    // Add to recent guesses
-    const newRecentGuess = { player: currentPlayer, word: currentGuess };
-    setRecentGuesses(prev => [newRecentGuess, ...prev.slice(0, 4)]);
-
-    // Update used letters
-    const newUsedLetters = { ...usedLetters };
-    for (let i = 0; i < currentGuess.length; i++) {
-      const letter = currentGuess[i];
-      const status = guessResult[i];
-      if (!newUsedLetters[letter] || 
-          (newUsedLetters[letter] === 'absent' && status !== 'absent') ||
-          (newUsedLetters[letter] === 'present' && status === 'correct')) {
-        newUsedLetters[letter] = status;
+    } else if (key.length === 1 && /^[A-Za-z]$/.test(key)) {
+      if (currentGuess.length < wordLength) {
+        setCurrentGuess(prev => prev + key.toUpperCase());
       }
     }
-    setUsedLetters(newUsedLetters);
-
-    // Check win condition
-    if (currentGuess === targetWord) {
-      setGameWon(true);
-      toast.success(`🎉 Victory! Player ${currentPlayer} solved it with "${currentGuess}"!`);
-    } else if (newGuesses.length >= maxGuesses) {
-      setGameLost(true);
-      toast.error(`Game Over! The word was "${targetWord}"`);
-    } else {
-      // Switch players and start delay
-      setCurrentPlayer(currentPlayer === 1 ? 2 : 1);
-      setCanGuess(false);
-      setCountdown(3);
-      toast.info(`Player ${currentPlayer} guessed "${currentGuess}". Player ${currentPlayer === 1 ? 2 : 1}'s turn in 3 seconds!`);
-    }
-
-    setCurrentGuess('');
   };
 
-  const renderGuessGrid = () => {
-    const rows = [];
+  const submitGuess = () => {
+    if (currentGuess.length !== wordLength) {
+      toast({ title: "Invalid guess", description: `Word must be ${wordLength} letters long`, variant: "destructive" });
+      return;
+    }
     
-    // Render completed guesses
-    for (let i = 0; i < guesses.length; i++) {
-      const guess = guesses[i];
-      const guessResult = checkGuess(guess, targetWord);
-      
-      rows.push(
-        <div key={i} className="flex gap-2 justify-center mb-2">
-          {guess.split('').map((letter, j) => (
-            <div
-              key={j}
-              className={`w-12 h-12 flex items-center justify-center text-white font-bold text-lg border-2 ${
-                guessResult[j] === 'correct'
-                  ? 'bg-green-500 border-green-500'
-                  : guessResult[j] === 'present'
-                  ? 'bg-yellow-500 border-yellow-500'
-                  : 'bg-gray-500 border-gray-500'
-              }`}
-            >
-              {letter}
-            </div>
-          ))}
-        </div>
-      );
-    }
+    setIsSubmitting(true);
+    sendMessage({
+      action: 'submit_coop_guess',
+      guess: currentGuess,
+      playerId: currentUserId,
+    });
 
-    // Render current guess row
-    if (!gameWon && !gameLost && guesses.length < maxGuesses) {
-      rows.push(
-        <div key="current" className="flex gap-2 justify-center mb-2">
-          {Array.from({ length: wordLength }).map((_, i) => (
-            <div
-              key={i}
-              className="w-12 h-12 flex items-center justify-center text-gray-800 font-bold text-lg border-2 border-gray-400 bg-white"
-            >
-              {currentGuess[i] || ''}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    // Render empty rows
-    const remainingRows = maxGuesses - guesses.length - (gameWon || gameLost ? 0 : 1);
-    for (let i = 0; i < remainingRows; i++) {
-      rows.push(
-        <div key={`empty-${i}`} className="flex gap-2 justify-center mb-2">
-          {Array.from({ length: wordLength }).map((_, j) => (
-            <div
-              key={j}
-              className="w-12 h-12 flex items-center justify-center border-2 border-gray-300 bg-gray-100"
-            />
-          ))}
-        </div>
-      );
-    }
-
-    return rows;
+    // The actual state update will come from the WebSocket echo.
+    // We optimistically clear the guess and disable the keyboard.
+    setCurrentGuess("");
+    // A slight delay to prevent spamming while waiting for WebSocket message
+    setTimeout(() => setIsSubmitting(false), 1000);
   };
+
+  const renderTile = (letter: string, result: GuessResult | undefined, index: number) => {
+    let bgColor = currentTheme.colors.empty;
+    let textColor = 'text-gray-800';
+
+    switch (result) {
+        case 'correct': bgColor = currentTheme.colors.correct; textColor = 'text-white'; break;
+        case 'present': bgColor = currentTheme.colors.present; textColor = 'text-white'; break;
+        case 'absent': bgColor = currentTheme.colors.absent; textColor = 'text-white'; break;
+        default: if(letter) { bgColor = currentTheme.colors.current; textColor = 'text-blue-800' };
+    }
+
+    return (
+      <div key={index} className={`w-12 h-12 border-2 flex items-center justify-center text-lg font-bold rounded-lg transition-all duration-300 ${bgColor} ${textColor}`}>
+        {letter}
+      </div>
+    );
+  };
+  
+  const renderSharedBoard = () => {
+      // In cooperative mode, there is one shared board state.
+      // We can take the guesses from any player, but we'll use turnHistory for order.
+      const allGuesses = wsGameState?.turnHistory || [];
+      const displayGuesses = Array.from({ length: wsGameState?.maxGuesses ?? 6 });
+
+      return (
+        <div className="flex flex-col items-center gap-2">
+            {displayGuesses.map((_, rowIndex) => (
+                <div key={rowIndex} className="flex gap-1">
+                    {Array.from({ length: wsGameState?.wordLength ?? wordLength }).map((_, colIndex) => {
+                        const guessData = allGuesses[rowIndex];
+                        // This logic will need to be refined based on how the backend structures the shared guess history
+                        const letter = guessData ? guessData.guess[colIndex] : (isMyTurn && rowIndex === allGuesses.length ? currentGuess[colIndex] : '') || '';
+                        // The result would also come from a shared history object
+                        const result = undefined; // Placeholder
+                        return renderTile(letter, result, colIndex);
+                    })}
+                </div>
+            ))}
+        </div>
+      )
+  };
+
+  if (!isConnected || !wsGameState) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${currentTheme.background}`}>
+        <Loader2 className="w-16 h-16 text-white animate-spin" />
+        <p className="text-white text-2xl ml-4">Joining Cooperative Game...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            onClick={onBack}
-            variant="outline"
-            className="bg-white/20 text-white border-white/30 hover:bg-white/30"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Menu
-          </Button>
-          
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              <Users className="w-8 h-8 inline mr-2" />
-              Cooperative Mode
-            </h1>
-            <p className="text-blue-100">Work together to solve the word!</p>
-          </div>
-          
-          <div className="w-24" /> {/* Spacer */}
-        </div>
-
-        {/* Main Game Card */}
-        <Card className="bg-white/95 shadow-xl mb-6">
-          <CardHeader>
-            <CardTitle className="text-center text-gray-800">
-              Guess {guesses.length + 1} of {maxGuesses}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Player Status */}
-            <div className="flex justify-center items-center gap-4 mb-6">
-              <div className={`px-4 py-2 rounded-lg ${currentPlayer === 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                <div className="text-lg font-bold">Player 1</div>
-                {currentPlayer === 1 && !gameWon && !gameLost && (
-                  <div className="text-sm">Your Turn</div>
-                )}
-              </div>
-
-              {countdown > 0 && (
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Clock className="w-5 h-5" />
-                  <span className="text-xl font-bold">{countdown}</span>
+    <div className={`min-h-screen ${currentTheme.background} ${currentTheme.font} p-4`}>
+        <div className="max-w-4xl mx-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+                <Button variant="outline" onClick={onBack} className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Leave
+                </Button>
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-white mb-2">Cooperative Mode</h1>
+                    <p className="text-blue-100">{isMyTurn ? "It's your turn!" : `Waiting for ${activePlayerName}...`}</p>
                 </div>
-              )}
-
-              <div className={`px-4 py-2 rounded-lg ${currentPlayer === 2 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                <div className="text-lg font-bold">Player 2</div>
-                {currentPlayer === 2 && !gameWon && !gameLost && (
-                  <div className="text-sm">Your Turn</div>
-                )}
-              </div>
+                 <div className="w-24" /> {/* Spacer */}
             </div>
 
-            {/* Game Grid */}
-            <div className="mb-6">
-              {renderGuessGrid()}
-            </div>
+            {/* Main Game Card */}
+            <Card className="bg-white/95 border-0 shadow-xl mb-6">
+                <CardHeader>
+                    <CardTitle className="text-center text-gray-800">
+                      Work together to find the word!
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                    {renderSharedBoard()}
+                </CardContent>
+            </Card>
 
-            {/* Game Over Messages */}
-            {gameWon && (
-              <div className="text-center p-4 bg-green-100 rounded-lg mb-4">
-                <h2 className="text-2xl font-bold text-green-800 mb-2">🎉 Congratulations!</h2>
-                <p className="text-green-700">You both solved it together!</p>
-                <p className="text-green-600 mt-2">The word was: <span className="font-bold">{targetWord}</span></p>
-              </div>
-            )}
-
-            {gameLost && (
-              <div className="text-center p-4 bg-red-100 rounded-lg mb-4">
-                <h2 className="text-2xl font-bold text-red-800 mb-2">Game Over</h2>
-                <p className="text-red-700">Better luck next time!</p>
-                <p className="text-red-600 mt-2">The word was: <span className="font-bold">{targetWord}</span></p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Guesses */}
-        {recentGuesses.length > 0 && (
-          <Card className="bg-white/95 mb-6">
-            <CardHeader>
-              <CardTitle className="text-center text-gray-800">Recent Guesses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {recentGuesses.map((guess, index) => (
-                  <div key={index} className="text-center text-gray-700">
-                    <span className="font-semibold">Player {guess.player}</span> guessed "{guess.word}"
-                  </div>
+            {/* Player List and Scores */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                {Object.values(wsGameState.players).map((p: { name: string; score: number }) => (
+                    <Card key={p.name} className={`bg-white/90 border-2 ${wsGameState.currentPlayerId === 'player1' ? 'border-blue-400' : 'border-transparent'}`}>
+                       <CardContent className="p-4 text-center">
+                           <div className="font-bold text-lg">{p.name} {p.name === 'You' ? '(You)' : ''}</div>
+                           <div className="text-xl">{p.score} pts</div>
+                       </CardContent>
+                    </Card>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Debug Mode - Two Keyboards */}
-        <div className="space-y-6">
-          <Card className="bg-white/95">
-            <CardHeader>
-              <CardTitle className="text-center text-gray-800">Player 1 Keyboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <VirtualKeyboard
-                onKeyPress={currentPlayer === 1 ? handleKeyPress : () => {}}
-                usedLetters={usedLetters}
-                disabled={currentPlayer !== 1 || !canGuess || gameWon || gameLost}
-              />
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/95">
-            <CardHeader>
-              <CardTitle className="text-center text-gray-800">Player 2 Keyboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <VirtualKeyboard
-                onKeyPress={currentPlayer === 2 ? handleKeyPress : () => {}}
-                usedLetters={usedLetters}
-                disabled={currentPlayer !== 2 || !canGuess || gameWon || gameLost}
-              />
-            </CardContent>
-          </Card>
+            </div>
+            
+            {/* Keyboard */}
+            <div className="max-w-2xl mx-auto">
+                 <VirtualKeyboard 
+                    onKeyPress={handleKeyPress} 
+                    usedLetters={{}} // This would come from shared game state
+                    disabled={!isMyTurn || isSubmitting || wsGameState.status !== 'playing'}
+                 />
+            </div>
         </div>
-      </div>
     </div>
   );
 };

@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface WordleTheme {
   id: string;
@@ -68,32 +67,6 @@ export const themes: WordleTheme[] = [
     background: 'bg-gradient-to-br from-green-600 via-emerald-700 to-teal-800',
     font: 'font-mono'
   },
-  {
-    id: 'purple',
-    name: 'Purple Dream',
-    colors: {
-      correct: 'bg-purple-500',
-      present: 'bg-violet-400',
-      absent: 'bg-gray-500',
-      empty: 'bg-purple-50 border-purple-200',
-      current: 'bg-purple-200 border-purple-400'
-    },
-    background: 'bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-700',
-    font: 'font-serif'
-  },
-  {
-    id: 'rose',
-    name: 'Rose Garden',
-    colors: {
-      correct: 'bg-rose-500',
-      present: 'bg-pink-400',
-      absent: 'bg-gray-500',
-      empty: 'bg-rose-50 border-rose-200',
-      current: 'bg-rose-200 border-rose-400'
-    },
-    background: 'bg-gradient-to-br from-pink-400 via-rose-500 to-red-600',
-    font: 'font-sans'
-  }
 ];
 
 interface ThemeContextType {
@@ -105,7 +78,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
-  const [currentTheme, setCurrentTheme] = useState<WordleTheme>(themes[0]);
+  const [currentTheme, setCurrentThemeState] = useState<WordleTheme>(() => {
+    try {
+      const storedThemeId = localStorage.getItem('wordle-theme');
+      return themes.find(t => t.id === storedThemeId) || themes[0];
+    } catch (error) {
+      console.error("Could not access localStorage, defaulting to classic theme.", error);
+      return themes[0];
+    }
+  });
+
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const setTheme = (themeId: string) => {
@@ -113,14 +95,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (theme && theme.id !== currentTheme.id) {
       setIsTransitioning(true);
       
-      // Start transition
       setTimeout(() => {
-        setCurrentTheme(theme);
+        setCurrentThemeState(theme);
+        try {
+          localStorage.setItem('wordle-theme', theme.id);
+        } catch (error) {
+          console.error("Could not save theme to localStorage", error);
+        }
         
-        // End transition after theme change
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 50);
+        setTimeout(() => setIsTransitioning(false), 50);
       }, 150);
     }
   };
